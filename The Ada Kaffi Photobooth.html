@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ada Kaffi • Holiday Photobooth</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter, Playfair Display, & Caveat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons for crisp UI iconography -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Playfair Display', 'serif'],
+                        handwriting: ['Caveat', 'cursive'],
+                    },
+                    colors: {
+                        kaffi: {
+                            950: '#160d0a',
+                            900: '#211410',
+                            800: '#2e1d17',
+                            700: '#422b22',
+                            cranberry: '#b91c1c',
+                            cranberryLight: '#dc2626',
+                            pine: '#166534',
+                            pineLight: '#15803d',
+                            gold: '#eab308',
+                            cream: '#fdf8f2'
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'pop-in': 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'twinkle': 'twinkle 2.4s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        popIn: {
+                            '0%': { transform: 'scale(0.85)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        twinkle: {
+                            '0%': { opacity: '0.45', transform: 'scale(0.92)' },
+                            '100%': { opacity: '1', transform: 'scale(1.08)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar for warm espresso feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #211410;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #422b22;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b91c1c;
+        }
+
+        /* Shutter button tactile press effect */
+        .shutter-btn {
+            box-shadow: 0 0 0 4px rgba(253, 248, 242, 0.16), 0 10px 25px -5px rgba(185, 28, 28, 0.65);
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .shutter-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 6px rgba(234, 179, 8, 0.35), 0 15px 30px -5px rgba(185, 28, 28, 0.85);
+        }
+        .shutter-btn:active:not(:disabled) {
+            transform: scale(0.94);
+        }
+
+        /* Flash overlay animation */
+        @keyframes cameraFlash {
+            0% { opacity: 0.98; }
+            100% { opacity: 0; }
+        }
+        .flash-active {
+            animation: cameraFlash 0.45s ease-out forwards;
+        }
+
+        /* Video mirror transform */
+        .mirrored {
+            transform: scaleX(-1);
+        }
+
+        /* Cozy Espresso & Warm Holiday Glow Background */
+        .kaffi-bg {
+            background-color: #160d0a;
+            background-image:
+                radial-gradient(circle at 18% 12%, rgba(185, 28, 28, 0.14) 0%, transparent 42%),
+                radial-gradient(circle at 84% 18%, rgba(22, 101, 52, 0.15) 0%, transparent 45%),
+                radial-gradient(rgba(253, 248, 242, 0.05) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 24px 24px;
+        }
+
+        /* Active pill state */
+        .pill-active {
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+            color: #fdf8f2;
+            border-color: rgba(234, 179, 8, 0.45);
+            box-shadow: 0 4px 12px rgba(185, 28, 28, 0.45);
+        }
+
+        /* Canvas container subtle checkerboard for preview */
+        .canvas-stage {
+            background-image: linear-gradient(45deg, #1d120e 25%, transparent 25%),
+                              linear-gradient(-45deg, #1d120e 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #1d120e 75%),
+                              linear-gradient(-45deg, transparent 75%, #1d120e 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+        }
+    </style>
+</head>
+<body class="kaffi-bg text-amber-50 min-h-screen flex flex-col font-sans antialiased selection:bg-kaffi-cranberry selection:text-white relative overflow-x-hidden">
+
+    <!-- Subtle Ambient Falling Snow Canvas -->
+    <canvas id="snow-canvas" class="fixed inset-0 pointer-events-none z-10 opacity-75"></canvas>
+
+    <!-- Camera Flash Overlay -->
+    <div id="flash-overlay" class="fixed inset-0 bg-amber-50 pointer-events-none opacity-0 z-50"></div>
+
+    <!-- Custom Toast Notification Box -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Top Navigation / Holiday Cafe Header -->
+    <header class="border-b border-amber-900/50 bg-kaffi-900/90 backdrop-blur-md sticky top-0 z-30 shadow-lg">
+        <!-- Twinkling Fairy Lights Strand -->
+        <div class="w-full h-2.5 flex justify-around items-center px-4 overflow-hidden bg-kaffi-950/80 border-b border-amber-950/60" aria-hidden="true">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-twinkle"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24] animate-twinkle" style="animation-delay: 0.4s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-twinkle" style="animation-delay: 0.8s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_#fcd34d] animate-twinkle" style="animation-delay: 1.2s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-twinkle" style="animation-delay: 1.6s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-twinkle" style="animation-delay: 0.3s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24] animate-twinkle" style="animation-delay: 0.9s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-twinkle" style="animation-delay: 1.4s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-twinkle" style="animation-delay: 0.6s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_#fcd34d] animate-twinkle" style="animation-delay: 1.1s"></span>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-kaffi-cranberry via-red-700 to-amber-600 flex items-center justify-center shadow-lg shadow-red-950/60 border border-amber-400/30">
+                    <i class="ph-fill ph-coffee text-xl text-amber-50"></i>
+                </div>
+                <div>
+                    <h1 class="font-display font-bold text-lg sm:text-xl tracking-tight text-amber-50 flex items-center gap-2">
+                        The Ada Kaffi <span class="text-[11px] font-sans font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-900/70 text-emerald-200 border border-emerald-600/40">🎄 Holiday Booth</span>
+                    </h1>
+                    <p class="text-xs text-amber-200/70 hidden sm:block">The Ada Kaffi &bull; Holiday Photobooth &amp; Keepsake Studio</p>
+                </div>
+            </div>
+
+            <!-- Right Header Controls: Camera Selector, Mirror & Sound -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Camera Device Dropdown (Hidden if only 1 camera) -->
+                <div id="camera-select-wrapper" class="hidden items-center bg-kaffi-800 border border-amber-800/60 rounded-xl px-2.5 py-1.5">
+                    <i class="ph ph-video-camera text-amber-300/70 mr-2 text-sm"></i>
+                    <select id="camera-select" aria-label="Select Camera" class="bg-transparent text-xs sm:text-sm text-amber-50 focus:outline-none max-w-[130px] sm:max-w-[180px] truncate cursor-pointer">
+                    </select>
+                </div>
+
+                <!-- Mirror Toggle Button -->
+                <button id="mirror-btn" title="Flip Camera Horizontally" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-kaffi-800 hover:bg-kaffi-700 border border-amber-800/60 text-xs sm:text-sm font-medium transition text-amber-300">
+                    <i class="ph-bold ph-flip-horizontal text-base"></i>
+                    <span class="hidden md:inline">Mirror: On</span>
+                </button>
+
+                <!-- Sound Toggle Button -->
+                <button id="sound-btn" title="Toggle Sleigh Bell & Shutter Sound" class="p-2 rounded-xl bg-kaffi-800 hover:bg-kaffi-700 border border-amber-800/60 text-amber-100 transition">
+                    <i id="sound-icon" class="ph-bold ph-speaker-high text-base"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Studio Workspace -->
+    <main class="relative z-20 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- LEFT / CENTER COLUMN: Live Camera Viewfinder & Capture Controls (7 cols on lg) -->
+        <section class="lg:col-span-7 flex flex-col gap-5">
+
+            <!-- Layout Mode & Timer Top Bar -->
+            <div class="bg-kaffi-900/90 border border-amber-900/60 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+                <!-- Layout Modes -->
+                <div class="flex items-center gap-1.5 bg-kaffi-950 p-1 rounded-xl border border-amber-900/50" role="group" aria-label="Layout Mode">
+                    <button data-mode="single" class="mode-btn pill-active px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 transition">
+                        <i class="ph-bold ph-gift"></i> Holiday Card
+                    </button>
+                    <button data-mode="strip" class="mode-btn text-amber-200/70 hover:text-amber-50 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 transition">
+                        <i class="ph-bold ph-rows"></i> 4-Photo Strip
+                    </button>
+                    <button data-mode="grid" class="mode-btn text-amber-200/70 hover:text-amber-50 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 transition">
+                        <i class="ph-bold ph-squares-four"></i> 2x2 Cozy Grid
+                    </button>
+                </div>
+
+                <!-- Countdown Timer Selector -->
+                <div class="flex items-center gap-1.5 bg-kaffi-950 p-1 rounded-xl border border-amber-900/50" role="group" aria-label="Countdown Timer">
+                    <span class="text-xs text-amber-300/60 pl-2 pr-1 flex items-center gap-1"><i class="ph ph-timer"></i> Timer:</span>
+                    <button data-timer="0" class="timer-btn text-amber-200/70 hover:text-amber-50 px-2.5 py-1 rounded-lg text-xs font-semibold transition">Off</button>
+                    <button data-timer="3" class="timer-btn pill-active px-2.5 py-1 rounded-lg text-xs font-semibold transition">3s</button>
+                    <button data-timer="5" class="timer-btn text-amber-200/70 hover:text-amber-50 px-2.5 py-1 rounded-lg text-xs font-semibold transition">5s</button>
+                </div>
+            </div>
+
+            <!-- Live Camera Viewfinder Box -->
+            <div class="relative w-full aspect-[4/3] bg-kaffi-950 rounded-3xl overflow-hidden border-2 border-amber-800/70 shadow-2xl flex items-center justify-center group">
+                <!-- Live Video Element -->
+                <video id="webcam-video" autoplay playsinline muted class="w-full h-full object-cover mirrored transition-[filter] duration-200"></video>
+
+                <!-- Viewfinder Holiday HUD Overlay -->
+                <div id="viewfinder-hud" class="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 bg-kaffi-950/75 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/25">
+                            <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span id="status-badge" class="text-[11px] font-mono uppercase tracking-wider text-amber-100">THE ADA KAFFI • LIVE</span>
+                        </div>
+                        <div id="sequence-badge" class="hidden bg-kaffi-cranberry/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-amber-50 shadow-lg border border-amber-300/30">
+                            Shot 1 of 4
+                        </div>
+                    </div>
+
+                    <!-- Festive Corner Framing Brackets -->
+                    <div class="w-full h-full absolute inset-0 p-6 pointer-events-none opacity-45">
+                        <div class="w-full h-full border border-amber-200/20 rounded-xl relative">
+                            <div class="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-2 border-l-2 border-amber-400"></div>
+                            <div class="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-2 border-r-2 border-amber-400"></div>
+                            <div class="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-2 border-l-2 border-amber-400"></div>
+                            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-2 border-r-2 border-amber-400"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Giant Festive Countdown Overlay -->
+                <div id="countdown-overlay" class="hidden absolute inset-0 bg-kaffi-950/45 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 pointer-events-none">
+                    <span id="countdown-number" class="font-display font-bold text-8xl sm:text-9xl text-amber-50 drop-shadow-[0_4px_24px_rgba(185,28,28,0.95)] animate-pop-in">3</span>
+                    <span id="countdown-subtext" class="mt-2 text-sm font-medium uppercase tracking-widest text-amber-100 bg-kaffi-cranberry/85 border border-amber-300/30 px-4 py-1 rounded-full shadow-lg">Say Merry Christmas! 🎄</span>
+                </div>
+
+                <!-- Camera Permission / Error Fallback State -->
+                <div id="camera-fallback" class="hidden absolute inset-0 bg-kaffi-900/95 p-6 flex flex-col items-center justify-center text-center z-20">
+                    <div class="w-16 h-16 rounded-2xl bg-red-900/30 border border-red-500/40 flex items-center justify-center text-red-400 mb-4">
+                        <i class="ph-bold ph-camera-slash text-3xl"></i>
+                    </div>
+                    <h3 id="fallback-title" class="font-display font-bold text-lg text-amber-50 mb-1">Camera Access Needed</h3>
+                    <p id="fallback-desc" class="text-sm text-amber-200/75 max-w-md mb-5">
+                        Please allow webcam permissions in your browser to take your holiday snap, or try our cozy Holiday Demo Cam below.
+                    </p>
+                    <div class="flex flex-wrap items-center justify-center gap-3">
+                        <button id="retry-camera-btn" class="px-4 py-2.5 rounded-xl bg-kaffi-cranberry hover:bg-red-600 text-amber-50 text-sm font-semibold transition flex items-center gap-2 shadow-lg">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Retry Camera
+                        </button>
+                        <button id="demo-mode-btn" class="px-4 py-2.5 rounded-xl bg-kaffi-pine hover:bg-emerald-700 border border-emerald-500/40 text-amber-50 text-sm font-semibold transition flex items-center gap-2 shadow-lg">
+                            <i class="ph-bold ph-snowflake"></i> Use Holiday Demo Cam
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Holiday & Cafe Filter Selector Strip -->
+            <div class="bg-kaffi-900/90 border border-amber-900/60 rounded-2xl p-3.5 shadow-xl">
+                <div class="flex items-center justify-between mb-2.5 px-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-amber-200/75 flex items-center gap-1.5">
+                        <i class="ph-bold ph-sparkle text-amber-400"></i> Holiday &amp; Cafe Filters
+                    </span>
+                    <span id="active-filter-label" class="text-xs font-medium text-amber-300">Cozy Warmth</span>
+                </div>
+                <div id="filter-list" class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <!-- Primary Shutter Action Bar -->
+            <div class="flex flex-col items-center justify-center gap-2 py-1">
+                <div class="flex items-center justify-center gap-6">
+                    <!-- Cancel Sequence Button (visible only during multi-shot countdown) -->
+                    <button id="cancel-capture-btn" class="hidden px-4 py-2.5 rounded-xl bg-kaffi-800 hover:bg-kaffi-700 text-amber-100 text-xs font-semibold uppercase tracking-wider border border-amber-800/70 transition">
+                        Cancel
+                    </button>
+
+                    <!-- Big Holiday Shutter Button -->
+                    <button id="shutter-btn" aria-label="Take Holiday Photo" class="shutter-btn relative w-20 h-20 rounded-full bg-gradient-to-tr from-kaffi-cranberry via-red-600 to-amber-500 flex items-center justify-center text-amber-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        <div class="w-16 h-16 rounded-full border-2 border-amber-100/85 flex items-center justify-center">
+                            <i class="ph-fill ph-camera text-2xl"></i>
+                        </div>
+                    </button>
+                </div>
+                <span class="text-[11px] text-amber-200/55">Press button or hit <kbd class="px-1.5 py-0.5 bg-kaffi-800 border border-amber-800/70 rounded text-amber-200 font-mono text-[10px]">Space</kbd> to snap</span>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Photo Strip Customizer, Canvas Result & Session Gallery (5 cols on lg) -->
+        <section class="lg:col-span-5 flex flex-col gap-5">
+
+            <!-- Customization Card: Frame Style, Caption & Stickers -->
+            <div class="bg-kaffi-900/90 border border-amber-900/60 rounded-2xl p-4 shadow-xl flex flex-col gap-4">
+                <div class="flex items-center justify-between border-b border-amber-900/50 pb-2.5">
+                    <h2 class="font-display font-bold text-base text-amber-50 flex items-center gap-2">
+                        <i class="ph-bold ph-gift text-red-400"></i> The Ada Kaffi Frame Studio
+                    </h2>
+                    <span class="text-[11px] text-amber-200/60">Updates live on preview</span>
+                </div>
+
+                <!-- Frame Theme Swatches -->
+                <div>
+                    <label class="block text-xs font-medium text-amber-200/80 mb-2">Holiday Frame Theme</label>
+                    <div id="theme-swatches" class="grid grid-cols-5 gap-2">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Caption & Date Stamp Controls -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                    <div class="sm:col-span-8">
+                        <label for="caption-input" class="block text-xs font-medium text-amber-200/80 mb-1">Holiday Keepsake Caption</label>
+                        <input id="caption-input" type="text" maxlength="40" value="Merry Christmas from The Ada Kaffi ☕🎄" placeholder="Enter holiday message..."
+                               class="w-full bg-kaffi-950 border border-amber-800/70 focus:border-amber-400 rounded-xl px-3 py-2 text-sm text-amber-50 placeholder-amber-200/40 focus:outline-none transition">
+                    </div>
+                    <div class="sm:col-span-4 flex sm:flex-col justify-between sm:justify-end h-full pt-1 sm:pt-5">
+                        <label class="inline-flex items-center gap-2 cursor-pointer select-none bg-kaffi-950 border border-amber-900/60 px-3 py-2 rounded-xl">
+                            <input id="date-toggle" type="checkbox" checked class="accent-red-600 w-4 h-4 rounded cursor-pointer">
+                            <span class="text-xs font-medium text-amber-100">Winter Stamp</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Festive & Coffee Sticker Stamper + Resize/Remove Controls -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-medium text-amber-200/80">Festive Stickers (Click to add, drag on preview)</label>
+                        <button id="clear-stickers-btn" class="text-[11px] text-red-400 hover:text-red-300 hidden">Clear All</button>
+                    </div>
+                    <div id="sticker-palette" class="flex flex-wrap gap-1.5">
+                        <!-- Populated via JS -->
+                    </div>
+
+                    <!-- Active Selected Sticker Toolbar (Resize / Delete) -->
+                    <div id="selected-sticker-bar" class="hidden mt-2.5 p-2 rounded-xl bg-kaffi-950 border border-amber-800/60 flex items-center justify-between gap-2">
+                        <span class="text-xs text-amber-200/80 flex items-center gap-1.5">
+                            Selected: <strong id="selected-sticker-emoji" class="text-base">🎄</strong>
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <button id="sticker-smaller-btn" title="Shrink Sticker" class="px-2 py-1 rounded-lg bg-kaffi-800 hover:bg-kaffi-700 text-amber-100 text-xs font-bold border border-amber-800/60">
+                                <i class="ph-bold ph-minus"></i>
+                            </button>
+                            <button id="sticker-larger-btn" title="Enlarge Sticker" class="px-2 py-1 rounded-lg bg-kaffi-800 hover:bg-kaffi-700 text-amber-100 text-xs font-bold border border-amber-800/60">
+                                <i class="ph-bold ph-plus"></i>
+                            </button>
+                            <button id="sticker-delete-btn" title="Remove Sticker" class="px-2 py-1 rounded-lg bg-red-900/70 hover:bg-red-700 text-red-100 text-xs font-bold border border-red-700/60">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Final Composed Canvas Preview Card -->
+            <div class="bg-kaffi-900/90 border border-amber-900/60 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="font-display font-bold text-base text-amber-50 flex items-center gap-2">
+                        <i class="ph-bold ph-image text-amber-400"></i> Holiday Print Preview
+                    </h2>
+                    <button id="download-btn" disabled class="px-3.5 py-2 rounded-xl bg-kaffi-pine hover:bg-emerald-600 disabled:bg-kaffi-800 disabled:text-amber-200/35 text-amber-50 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition shadow-lg shadow-emerald-950/60 disabled:shadow-none cursor-pointer disabled:cursor-not-allowed border border-emerald-500/30 disabled:border-transparent">
+                        <i class="ph-bold ph-download-simple text-base"></i> Download Keepsake PNG
+                    </button>
+                </div>
+
+                <!-- Canvas Display Stage -->
+                <div class="canvas-stage rounded-2xl border border-amber-900/60 p-4 min-h-[280px] max-h-[460px] flex items-center justify-center overflow-auto relative">
+                    <canvas id="output-canvas" class="max-w-full max-h-[420px] w-auto h-auto rounded shadow-2xl cursor-grab active:cursor-grabbing hidden"></canvas>
+
+                    <!-- Empty Placeholder State -->
+                    <div id="canvas-empty-state" class="text-center py-8 px-4">
+                        <div class="w-14 h-14 rounded-2xl bg-kaffi-800/90 border border-amber-800/60 flex items-center justify-center mx-auto mb-3 text-amber-300">
+                            <i class="ph-duotone ph-coffee text-3xl"></i>
+                        </div>
+                        <p class="text-sm font-medium text-amber-100">Your Ada Kaffi holiday print will develop here</p>
+                        <p class="text-xs text-amber-200/60 mt-1">Choose a layout &amp; press the red shutter button!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session Gallery Tray -->
+            <div class="bg-kaffi-900/90 border border-amber-900/60 rounded-2xl p-4 shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-display font-bold text-sm flex items-center gap-2 text-amber-100">
+                        <i class="ph-bold ph-images text-red-400"></i> Holiday Keepsake Roll
+                        <span id="gallery-count" class="text-xs font-mono bg-kaffi-800 text-amber-200 px-2 py-0.5 rounded-full">0</span>
+                    </h3>
+                    <button id="clear-gallery-btn" class="text-xs text-amber-200/50 hover:text-red-400 transition hidden">Clear All</button>
+                </div>
+
+                <div id="gallery-tray" class="flex gap-3 overflow-x-auto pb-2 min-h-[84px] items-center">
+                    <p id="gallery-empty-msg" class="text-xs text-amber-200/50 italic w-full text-center py-4">No holiday snaps taken in this session yet.</p>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Virtual Holiday Demo Canvas (Hidden offscreen generator if user lacks physical webcam) -->
+    <canvas id="demo-source-canvas" width="640" height="480" class="hidden"></canvas>
+
+    <script>
+        /**
+         * The Ada Kaffi — Holiday Photobooth Application
+         * Features cozy cafe aesthetics, ambient falling snow, webcam + festive demo cam,
+         * synthesized sleigh-bell + shutter audio, holiday filters, custom Ada Kaffi frames,
+         * and draggable/resizable stickers.
+         */
+        (() => {
+            // ==========================================
+            // 1. CONFIGURATION & HOLIDAY DATA DEFINITIONS
+            // ==========================================
+            const FILTERS = [
+                { id: 'cozy', name: 'Cozy Warmth', css: 'sepia(0.24) saturate(1.22) contrast(1.05) brightness(1.04)', icon: 'ph-fire' },
+                { id: 'natural', name: 'Classic Natural', css: 'none', icon: 'ph-aperture' },
+                { id: 'peppermint', name: 'Peppermint Crisp', css: 'contrast(1.14) saturate(1.18) brightness(1.06) hue-rotate(-6deg)', icon: 'ph-snowflake' },
+                { id: 'sepia', name: 'Vintage Sepia', css: 'sepia(0.62) contrast(1.08) brightness(0.98)', icon: 'ph-sun-horizon' },
+                { id: 'noir', name: 'Snowy Noir', css: 'grayscale(1) contrast(1.36) brightness(1.02)', icon: 'ph-contrast' },
+                { id: 'espresso', name: 'Golden Espresso', css: 'sepia(0.38) contrast(1.18) saturate(1.28) brightness(0.95)', icon: 'ph-coffee' }
+            ];
+
+            const FRAME_THEMES = [
+                { id: 'cranberry', name: 'Cranberry Plaid', bg: 'plaid', text: '#fdf8f2', subtext: '#fde68a', border: '#991b1b', swatch: 'bg-red-800 border-amber-400' },
+                { id: 'pine', name: 'Pine & Gold', bg: '#143d29', text: '#fef3c7', subtext: '#fcd34d', border: '#d97706', swatch: 'bg-emerald-900 border-amber-400' },
+                { id: 'cream', name: 'Cream Snowfall', bg: '#fdf8f2', text: '#451a03', subtext: '#991b1b', border: '#e7d7c1', swatch: 'bg-amber-50 border-amber-300' },
+                { id: 'espresso', name: 'Espresso Velvet', bg: '#23140f', text: '#fef3c7', subtext: '#fca5a5', border: '#78350f', swatch: 'bg-[#23140f] border-amber-600' },
+                { id: 'candycane', name: 'Candy Cane', bg: 'candycane', text: '#7f1d1d', subtext: '#166534', border: '#dc2626', swatch: 'bg-[repeating-linear-gradient(45deg,#dc2626,#dc2626_5px,#ffffff_5px,#ffffff_10px)] border-red-400' }
+            ];
+
+            const STICKERS = ['☕', '🎄', '🎅', '❄️', '🎁', '🦌', '🍪', '✨', '❤️', '🧣'];
+
+            // ==========================================
+            // 2. APPLICATION STATE
+            // ==========================================
+            const state = {
+                stream: null,
+                isDemoMode: false,
+                demoAnimId: null,
+                mirrored: true,
+                soundEnabled: true,
+                mode: 'single', // 'single' | 'strip' | 'grid'
+                timerSeconds: 3,
+                activeFilter: FILTERS[0], // Cozy Warmth default
+                activeTheme: FRAME_THEMES[0], // Cranberry Plaid default
+                caption: 'Merry Christmas from The Ada Kaffi ☕🎄',
+                showDate: true,
+                isCapturing: false,
+                cancelRequested: false,
+                capturedFrames: [],
+                stickers: [],       // { emoji, x, y, size }
+                selectedStickerIdx: -1,
+                draggingStickerIdx: -1,
+                sessionHistory: []  // { id, dataUrl, mode }
+            };
+
+            // ==========================================
+            // 3. DOM ELEMENT REFERENCES
+            // ==========================================
+            const els = {
+                snowCanvas: document.getElementById('snow-canvas'),
+                video: document.getElementById('webcam-video'),
+                demoCanvas: document.getElementById('demo-source-canvas'),
+                cameraSelectWrapper: document.getElementById('camera-select-wrapper'),
+                cameraSelect: document.getElementById('camera-select'),
+                mirrorBtn: document.getElementById('mirror-btn'),
+                soundBtn: document.getElementById('sound-btn'),
+                soundIcon: document.getElementById('sound-icon'),
+                modeBtns: document.querySelectorAll('.mode-btn'),
+                timerBtns: document.querySelectorAll('.timer-btn'),
+                filterList: document.getElementById('filter-list'),
+                activeFilterLabel: document.getElementById('active-filter-label'),
+                shutterBtn: document.getElementById('shutter-btn'),
+                cancelCaptureBtn: document.getElementById('cancel-capture-btn'),
+                countdownOverlay: document.getElementById('countdown-overlay'),
+                countdownNumber: document.getElementById('countdown-number'),
+                countdownSubtext: document.getElementById('countdown-subtext'),
+                sequenceBadge: document.getElementById('sequence-badge'),
+                statusBadge: document.getElementById('status-badge'),
+                liveDot: document.getElementById('live-dot'),
+                flashOverlay: document.getElementById('flash-overlay'),
+                cameraFallback: document.getElementById('camera-fallback'),
+                fallbackTitle: document.getElementById('fallback-title'),
+                fallbackDesc: document.getElementById('fallback-desc'),
+                retryCameraBtn: document.getElementById('retry-camera-btn'),
+                demoModeBtn: document.getElementById('demo-mode-btn'),
+                themeSwatches: document.getElementById('theme-swatches'),
+                captionInput: document.getElementById('caption-input'),
+                dateToggle: document.getElementById('date-toggle'),
+                stickerPalette: document.getElementById('sticker-palette'),
+                clearStickersBtn: document.getElementById('clear-stickers-btn'),
+                selectedStickerBar: document.getElementById('selected-sticker-bar'),
+                selectedStickerEmoji: document.getElementById('selected-sticker-emoji'),
+                stickerSmallerBtn: document.getElementById('sticker-smaller-btn'),
+                stickerLargerBtn: document.getElementById('sticker-larger-btn'),
+                stickerDeleteBtn: document.getElementById('sticker-delete-btn'),
+                outputCanvas: document.getElementById('output-canvas'),
+                canvasEmptyState: document.getElementById('canvas-empty-state'),
+                downloadBtn: document.getElementById('download-btn'),
+                galleryTray: document.getElementById('gallery-tray'),
+                galleryCount: document.getElementById('gallery-count'),
+                galleryEmptyMsg: document.getElementById('gallery-empty-msg'),
+                clearGalleryBtn: document.getElementById('clear-gallery-btn'),
+                toastContainer: document.getElementById('toast-container')
+            };
+
+            // ==========================================
+            // 4. AMBIENT FALLING SNOW BACKGROUND
+            // ==========================================
+            function initSnowfall() {
+                const canvas = els.snowCanvas;
+                const ctx = canvas.getContext('2d');
+                let width = (canvas.width = window.innerWidth);
+                let height = (canvas.height = window.innerHeight);
+
+                window.addEventListener('resize', () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                });
+
+                const flakes = Array.from({ length: 45 }, () => ({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    r: 1.2 + Math.random() * 2.5,
+                    speedY: 0.4 + Math.random() * 0.9,
+                    drift: (Math.random() - 0.5) * 0.4,
+                    alpha: 0.25 + Math.random() * 0.55
+                }));
+
+                function animateSnow() {
+                    ctx.clearRect(0, 0, width, height);
+                    flakes.forEach(f => {
+                        f.y += f.speedY;
+                        f.x += f.drift + Math.sin(f.y * 0.015) * 0.25;
+                        if (f.y > height) {
+                            f.y = -5;
+                            f.x = Math.random() * width;
+                        }
+                        if (f.x > width) f.x = 0;
+                        if (f.x < 0) f.x = width;
+
+                        ctx.beginPath();
+                        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                        ctx.fillStyle = rgba(254, 243, 199, ${f.alpha});
+                        ctx.fill();
+                    });
+                    requestAnimationFrame(animateSnow);
+                }
+                animateSnow();
+            }
+
+            // ==========================================
+            // 5. WEB AUDIO API SLEIGH-BELL & SHUTTER SYNTH
+            // ==========================================
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            function playSleighBellChime(baseFreq = 1318.5) {
+                if (!state.soundEnabled) return;
+                try {
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    const now = audioCtx.currentTime;
+                    // Dual high harmonic chime for sleigh-bell sparkle
+                    [baseFreq, baseFreq * 1.5].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.03);
+                        gain.gain.setValueAtTime(0.08, now + idx * 0.03);
+                        gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.03 + 0.22);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.03);
+                        osc.stop(now + idx * 0.03 + 0.24);
+                    });
+                } catch (e) { /* Ignore blocked audio */ }
+            }
+
+            function playShutterAndBells() {
+                if (!state.soundEnabled) return;
+                try {
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    const now = audioCtx.currentTime;
+                    // Crisp mechanical shutter click
+                    const bufferSize = audioCtx.sampleRate * 0.14;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.028));
+                    }
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 1900;
+
+                    const gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0.32, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    noise.start(now);
+
+                    // Festive sleigh-bell jingle flourish right after shutter
+                    playSleighBellChime(1567.98);
+                } catch (e) { /* Ignore blocked audio */ }
+            }
+
+            // ==========================================
+            // 6. TOAST NOTIFICATIONS
+            // ==========================================
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                const colors = {
+                    info: 'bg-kaffi-800 border-amber-700/70 text-amber-50',
+                    success: 'bg-emerald-950/95 border-emerald-600/70 text-emerald-100',
+                    error: 'bg-red-950/95 border-red-600/70 text-red-100'
+                };
+                const icons = {
+                    info: 'ph-sparkle text-amber-400',
+                    success: 'ph-check-circle text-emerald-400',
+                    error: 'ph-warning-circle text-red-400'
+                };
+                toast.className = pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl text-xs sm:text-sm font-medium animate-pop-in ${colors[type] || colors.info};
+                toast.innerHTML = <i class="ph-bold ${icons[type] || icons.info} text-lg"></i><span>${message}</span>;
+                els.toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(8px)';
+                    toast.style.transition = 'all 0.25s ease';
+                    setTimeout(() => toast.remove(), 250);
+                }, 3000);
+            }
+
+            // ==========================================
+            // 7. WEBCAM & FESTIVE HOLIDAY DEMO CAM SETUP
+            // ==========================================
+            async function initCamera(deviceId = null) {
+                stopDemoMode();
+                els.cameraFallback.classList.add('hidden');
+
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showCameraError('Browser Not Supported', 'Your browser does not support webcam access. Launch our Holiday Demo Cam below to try the booth!');
+                    return;
+                }
+
+                try {
+                    if (state.stream) {
+                        state.stream.getTracks().forEach(track => track.stop());
+                    }
+
+                    const constraints = {
+                        video: deviceId
+                            ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 960 } }
+                            : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
+                        audio: false
+                    };
+
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    state.stream = stream;
+                    state.isDemoMode = false;
+                    els.video.srcObject = stream;
+                    els.statusBadge.textContent = 'THE ADA KAFFI • LIVE';
+                    els.liveDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+
+                    await enumerateCameras();
+                } catch (err) {
+                    console.warn('Webcam error:', err);
+                    let title = 'Camera Permission Needed';
+                    let desc = 'Allow camera access in your browser to snap your holiday portrait, or try our cozy Holiday Demo Cam!';
+                    if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                        title = 'No Webcam Detected';
+                        desc = 'No camera was found on your device. Test all frames, filters & stickers with our Holiday Demo Cam!';
+                    }
+                    showCameraError(title, desc);
+                }
+            }
+
+            async function enumerateCameras() {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                    if (videoDevices.length > 1) {
+                        els.cameraSelectWrapper.classList.remove('hidden');
+                        els.cameraSelectWrapper.classList.add('flex');
+                        const currentTrack = state.stream?.getVideoTracks()[0];
+                        const currentId = currentTrack?.getSettings()?.deviceId;
+
+                        els.cameraSelect.innerHTML = '';
+                        videoDevices.forEach((device, idx) => {
+                            const option = document.createElement('option');
+                            option.value = device.deviceId;
+                            option.textContent = device.label || Camera ${idx + 1};
+                            if (device.deviceId === currentId) option.selected = true;
+                            els.cameraSelect.appendChild(option);
+                        });
+                    } else {
+                        els.cameraSelectWrapper.classList.add('hidden');
+                        els.cameraSelectWrapper.classList.remove('flex');
+                    }
+                } catch (e) {
+                    console.warn('Could not list cameras:', e);
+                }
+            }
+
+            function showCameraError(title, desc) {
+                els.fallbackTitle.textContent = title;
+                els.fallbackDesc.textContent = desc;
+                els.cameraFallback.classList.remove('hidden');
+                els.statusBadge.textContent = 'CAMERA OFFLINE';
+                els.liveDot.className = 'w-2 h-2 rounded-full bg-red-500';
+            }
+
+            // Festive Holiday Demo Cam (Cozy Cafe Snowman + Steaming Mug + Live Clock)
+            function startDemoMode() {
+                state.isDemoMode = true;
+                els.cameraFallback.classList.add('hidden');
+                els.statusBadge.textContent = 'HOLIDAY DEMO CAM';
+                els.liveDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+
+                const ctx = els.demoCanvas.getContext('2d');
+                let t = 0;
+
+                const demoSnow = Array.from({ length: 35 }, () => ({
+                    x: Math.random() * 640,
+                    y: Math.random() * 480,
+                    r: 2 + Math.random() * 3.5,
+                    s: 1 + Math.random() * 1.8
+                }));
+
+                function renderDemoFrame() {
+                    t += 0.03;
+                    const w = els.demoCanvas.width;
+                    const h = els.demoCanvas.height;
+
+                    // Warm cozy cafe interior gradient
+                    const grad = ctx.createLinearGradient(0, 0, 0, h);
+                    grad.addColorStop(0, '#3b1814');
+                    grad.addColorStop(0.55, '#1e3a2f');
+                    grad.addColorStop(1, '#261510');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, w, h);
+
+                    // Warm golden fairy bokeh lights in background
+                    const lightColors = ['#ef4444', '#fbbf24', '#34d399', '#f59e0b'];
+                    for (let i = 0; i < 10; i++) {
+                        const lx = 50 + i * 60;
+                        const ly = 55 + Math.sin(i * 0.9) * 18;
+                        const pulse = 0.65 + 0.35 * Math.sin(t * 2.5 + i);
+                        ctx.beginPath();
+                        ctx.arc(lx, ly, 12, 0, Math.PI * 2);
+                        ctx.fillStyle = lightColors[i % lightColors.length];
+                        ctx.globalAlpha = pulse * 0.45;
+                        ctx.fill();
+                        ctx.globalAlpha = 1;
+                    }
+
+                    // Falling snowflakes in demo scene
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                    demoSnow.forEach(flake => {
+                        flake.y += flake.s;
+                        flake.x += Math.sin(t + flake.y * 0.02) * 0.6;
+                        if (flake.y > h) { flake.y = -5; flake.x = Math.random() * w; }
+                        ctx.beginPath();
+                        ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+
+                    // Jolly Cafe Snowman Character
+                    const cx = w / 2 - 35;
+                    const cy = h / 2 + 25 + Math.sin(t * 2) * 5;
+
+                    // Snowman body & head
+                    ctx.fillStyle = '#fdf8f2';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy + 68, 66, 0, Math.PI * 2);
+                    ctx.arc(cx, cy - 18, 48, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Red & green striped scarf
+                    ctx.fillStyle = '#dc2626';
+                    ctx.beginPath();
+                    ctx.roundRect(cx - 38, cy + 16, 76, 16, 8);
+                    ctx.fill();
+                    ctx.fillStyle = '#16a34a';
+                    ctx.fillRect(cx + 12, cy + 24, 15, 42);
+
+                    // Eyes & Carrot Nose
+                    ctx.fillStyle = '#1c1917';
+                    ctx.beginPath();
+                    ctx.arc(cx - 15, cy - 28, 4.5, 0, Math.PI * 2);
+                    ctx.arc(cx + 15, cy - 28, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - 20);
+                    ctx.lineTo(cx + 28, cy - 15);
+                    ctx.lineTo(cx, cy - 11);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Santa Hat
+                    ctx.fillStyle = '#b91c1c';
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 40, cy - 52);
+                    ctx.lineTo(cx + 40, cy - 52);
+                    ctx.lineTo(cx + 12, cy - 112);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.roundRect(cx - 44, cy - 60, 88, 15, 8);
+                    ctx.arc(cx + 14, cy - 114, 11, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Steaming Ada Kaffi Mug beside Snowman
+                    const mx = cx + 105;
+                    const my = cy + 45;
+                    ctx.fillStyle = '#991b1b';
+                    ctx.beginPath();
+                    ctx.roundRect(mx, my, 54, 62, 10);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fde68a';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(mx + 54, my + 31, 16, -Math.PI / 2, Math.PI / 2);
+                    ctx.stroke();
+
+                    // Animated Steam Waves
+                    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+                    ctx.lineWidth = 3;
+                    for (let s = 0; s < 3; s++) {
+                        ctx.beginPath();
+                        const sx = mx + 14 + s * 13;
+                        const offset = Math.sin(t * 3 + s) * 5;
+                        ctx.moveTo(sx, my - 8);
+                        ctx.quadraticCurveTo(sx + offset, my - 24, sx - offset, my - 40);
+                        ctx.stroke();
+                    }
+
+                    // Live Cafe Clock & Brand Banner
+                    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    ctx.fillStyle = 'rgba(22, 13, 10, 0.72)';
+                    ctx.beginPath();
+                    ctx.roundRect(w / 2 - 175, h - 56, 350, 34, 17);
+                    ctx.fill();
+                    ctx.fillStyle = '#fde68a';
+                    ctx.font = 'bold 13px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(THE ADA KAFFI HOLIDAY CAM  •  ${nowStr}, w / 2, h - 34);
+
+                    state.demoAnimId = requestAnimationFrame(renderDemoFrame);
+                }
+
+                renderDemoFrame();
+                const demoStream = els.demoCanvas.captureStream(30);
+                els.video.srcObject = demoStream;
+                showToast('Holiday Demo Cam activated! ☕❄️', 'info');
+            }
+
+            function stopDemoMode() {
+                if (state.demoAnimId) {
+                    cancelAnimationFrame(state.demoAnimId);
+                    state.demoAnimId = null;
+                }
+                state.isDemoMode = false;
+            }
+
+            // ==========================================
+            // 8. UI CONTROLS INITIALIZATION
+            // ==========================================
+            function buildFilterUI() {
+                els.filterList.innerHTML = '';
+                FILTERS.forEach(filter => {
+                    const btn = document.createElement('button');
+                    const isActive = state.activeFilter.id === filter.id;
+                    btn.className = `flex flex-col items-center justify-center gap-1 p-2 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                        isActive
+                            ? 'bg-kaffi-cranberry/30 border-amber-400 text-amber-50 shadow-sm'
+                            : 'bg-kaffi-950/85 border-amber-900/50 text-amber-200/65 hover:text-amber-50 hover:border-amber-700'
+                    }`;
+                    btn.innerHTML = `
+                        <i class="ph-bold ${filter.icon} text-base ${isActive ? 'text-amber-300' : ''}"></i>
+                        <span class="truncate w-full text-center text-[11px]">${filter.name}</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        state.activeFilter = filter;
+                        els.video.style.filter = filter.css;
+                        els.activeFilterLabel.textContent = filter.name;
+                        buildFilterUI();
+                    });
+                    els.filterList.appendChild(btn);
+                });
+                // Ensure initial video filter matches Cozy Warmth default
+                els.video.style.filter = state.activeFilter.css;
+            }
+
+            function buildThemeUI() {
+                els.themeSwatches.innerHTML = '';
+                FRAME_THEMES.forEach(theme => {
+                    const btn = document.createElement('button');
+                    const isActive = state.activeTheme.id === theme.id;
+                    btn.title = theme.name;
+                    btn.className = `group flex flex-col items-center gap-1.5 p-1.5 rounded-xl border transition cursor-pointer ${
+                        isActive ? 'border-amber-400 bg-kaffi-800/90' : 'border-transparent hover:bg-kaffi-800/40'
+                    }`;
+                    btn.innerHTML = `
+                        <span class="w-8 h-8 rounded-full border-2 shadow-inner ${theme.swatch} ${isActive ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-kaffi-900' : ''}"></span>
+                        <span class="text-[10px] font-medium ${isActive ? 'text-amber-50' : 'text-amber-200/65'} truncate max-w-full">${theme.name.split(' ')[0]}</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        state.activeTheme = theme;
+                        buildThemeUI();
+                        if (state.capturedFrames.length > 0) renderComposedCanvas(false);
+                    });
+                    els.themeSwatches.appendChild(btn);
+                });
+            }
+
+            function buildStickerPalette() {
+                els.stickerPalette.innerHTML = '';
+                STICKERS.forEach(emoji => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-9 h-9 rounded-xl bg-kaffi-950 hover:bg-kaffi-800 border border-amber-900/60 hover:border-amber-400 flex items-center justify-center text-lg transition transform active:scale-90 cursor-pointer';
+                    btn.textContent = emoji;
+                    btn.title = Add ${emoji} sticker;
+                    btn.addEventListener('click', () => {
+                        if (state.capturedFrames.length === 0) {
+                            showToast('Take a holiday photo first before adding stickers!', 'info');
+                            return;
+                        }
+                        state.stickers.push({
+                            emoji,
+                            x: 0.35 + Math.random() * 0.3,
+                            y: 0.35 + Math.random() * 0.3,
+                            size: 0.11
+                        });
+                        state.selectedStickerIdx = state.stickers.length - 1;
+                        updateSelectedStickerUI();
+                        els.clearStickersBtn.classList.remove('hidden');
+                        renderComposedCanvas(false);
+                    });
+                    els.stickerPalette.appendChild(btn);
+                });
+            }
+
+            function updateSelectedStickerUI() {
+                if (state.selectedStickerIdx >= 0 && state.stickers[state.selectedStickerIdx]) {
+                    els.selectedStickerBar.classList.remove('hidden');
+                    els.selectedStickerEmoji.textContent = state.stickers[state.selectedStickerIdx].emoji;
+                } else {
+                    els.selectedStickerBar.classList.add('hidden');
+                }
+                els.clearStickersBtn.classList.toggle('hidden', state.stickers.length === 0);
+            }
+
+            // ==========================================
+            // 9. CAPTURE SEQUENCE & COUNTDOWN LOGIC
+            // ==========================================
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            function triggerFlash() {
+                els.flashOverlay.classList.remove('flash-active');
+                void els.flashOverlay.offsetWidth;
+                els.flashOverlay.classList.add('flash-active');
+            }
+
+            function grabVideoSnapshot() {
+                const video = els.video;
+                const vw = video.videoWidth || 640;
+                const vh = video.videoHeight || 480;
+
+                const targetAspect = 4 / 3;
+                let sx = 0, sy = 0, sw = vw, sh = vh;
+                if (vw / vh > targetAspect) {
+                    sw = vh * targetAspect;
+                    sx = (vw - sw) / 2;
+                } else {
+                    sh = vw / targetAspect;
+                    sy = (vh - sh) / 2;
+                }
+
+                const snapCanvas = document.createElement('canvas');
+                snapCanvas.width = 800;
+                snapCanvas.height = 600;
+                const ctx = snapCanvas.getContext('2d');
+
+                ctx.filter = state.activeFilter.css;
+
+                if (state.mirrored) {
+                    ctx.translate(snapCanvas.width, 0);
+                    ctx.scale(-1, 1);
+                }
+
+                ctx.drawImage(video, sx, sy, sw, sh, 0, 0, snapCanvas.width, snapCanvas.height);
+                return snapCanvas;
+            }
+
+            async function runCountdown(seconds, shotIndex, totalShots) {
+                if (seconds <= 0) return true;
+                els.countdownOverlay.classList.remove('hidden');
+                els.countdownSubtext.textContent = totalShots > 1 ? Holiday Pose ${shotIndex} of ${totalShots} : 'Say Merry Christmas! 🎄';
+
+                for (let s = seconds; s >= 1; s--) {
+                    if (state.cancelRequested) {
+                        els.countdownOverlay.classList.add('hidden');
+                        return false;
+                    }
+                    els.countdownNumber.textContent = s;
+                    els.countdownNumber.classList.remove('animate-pop-in');
+                    void els.countdownNumber.offsetWidth;
+                    els.countdownNumber.classList.add('animate-pop-in');
+
+                    playSleighBellChime(s === 1 ? 1567.98 : 1174.66);
+                    await sleep(1000);
+                }
+
+                els.countdownOverlay.classList.add('hidden');
+                return !state.cancelRequested;
+            }
+
+            async function startCaptureSequence() {
+                if (state.isCapturing) return;
+                if (!state.stream && !state.isDemoMode) {
+                    showToast('Please enable your camera or Holiday Demo Cam first!', 'error');
+                    return;
+                }
+
+                state.isCapturing = true;
+                state.cancelRequested = false;
+                els.shutterBtn.disabled = true;
+                els.cancelCaptureBtn.classList.remove('hidden');
+
+                const totalShots = state.mode === 'single' ? 1 : 4;
+                const newFrames = [];
+
+                for (let i = 1; i <= totalShots; i++) {
+                    if (totalShots > 1) {
+                        els.sequenceBadge.textContent = Shot ${i} of ${totalShots};
+                        els.sequenceBadge.classList.remove('hidden');
+                    }
+
+                    const completed = await runCountdown(state.timerSeconds, i, totalShots);
+                    if (!completed) break;
+
+                    triggerFlash();
+                    playShutterAndBells();
+                    const frame = grabVideoSnapshot();
+                    newFrames.push(frame);
+
+                    if (i < totalShots) {
+                        await sleep(650);
+                    }
+                }
+
+                els.sequenceBadge.classList.add('hidden');
+                els.cancelCaptureBtn.classList.add('hidden');
+                els.shutterBtn.disabled = false;
+                state.isCapturing = false;
+
+                if (!state.cancelRequested && newFrames.length === totalShots) {
+                    state.capturedFrames = newFrames;
+                    renderComposedCanvas(true);
+                    showToast(totalShots > 1 ? '4-Photo Holiday Strip ready! 🎄' : 'Holiday card snapped! ☕', 'success');
+                } else if (state.cancelRequested) {
+                    showToast('Holiday capture cancelled.', 'info');
+                }
+            }
+
+            // ==========================================
+            // 10. THE ADA KAFFI HOLIDAY CANVAS COMPOSITOR
+            // ==========================================
+            function drawCranberryPlaidPattern(ctx, width, height) {
+                ctx.fillStyle = '#7f1d1d';
+                ctx.fillRect(0, 0, width, height);
+
+                // Dark pine green woven stripes
+                ctx.fillStyle = 'rgba(20, 83, 45, 0.55)';
+                for (let x = 0; x < width; x += 64) {
+                    ctx.fillRect(x, 0, 28, height);
+                }
+                for (let y = 0; y < height; y += 64) {
+                    ctx.fillRect(0, y, width, 28);
+                }
+
+                // Warm gold tartan accent hairlines
+                ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+                ctx.lineWidth = 2;
+                for (let x = 14; x < width; x += 64) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+                for (let y = 14; y < height; y += 64) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+            }
+
+            function drawCandyCanePattern(ctx, width, height) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.save();
+                ctx.strokeStyle = '#dc2626';
+                ctx.lineWidth = 22;
+                const step = 56;
+                for (let i = -height; i < width + height; i += step) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i - height, height);
+                    ctx.stroke();
+                }
+                ctx.restore();
+
+                // Soft cream inner mat so photos & footer pop cleanly
+                ctx.fillStyle = 'rgba(253, 248, 242, 0.92)';
+                ctx.fillRect(20, 20, width - 40, height - 40);
+            }
+
+            function renderComposedCanvas(saveToHistory = false) {
+                if (state.capturedFrames.length === 0) return;
+
+                const canvas = els.outputCanvas;
+                const ctx = canvas.getContext('2d');
+                const theme = state.activeTheme;
+
+                const pad = 38;
+                const gap = 24;
+                const headerHeight = 52;
+                const footerHeight = (state.caption.trim() || state.showDate) ? 112 : 44;
+
+                let photoW = 640;
+                let photoH = 480;
+                let canvasW = 0;
+                let canvasH = 0;
+
+                if (state.mode === 'single') {
+                    photoW = 800;
+                    photoH = 600;
+                    canvasW = photoW + pad * 2;
+                    canvasH = headerHeight + photoH + footerHeight;
+                } else if (state.mode === 'strip') {
+                    photoW = 540;
+                    photoH = 405;
+                    canvasW = photoW + pad * 2;
+                    canvasH = headerHeight + (photoH * 4) + (gap * 3) + footerHeight;
+                } else if (state.mode === 'grid') {
+                    photoW = 480;
+                    photoH = 360;
+                    canvasW = pad * 2 + photoW * 2 + gap;
+                    canvasH = headerHeight + photoH * 2 + gap + footerHeight;
+                }
+
+                canvas.width = canvasW;
+                canvas.height = canvasH;
+
+                // 1. Background Fill
+                if (theme.bg === 'plaid') {
+                    drawCranberryPlaidPattern(ctx, canvasW, canvasH);
+                    // Frosted dark cranberry banner for crisp header/footer legibility
+                    ctx.fillStyle = 'rgba(69, 10, 10, 0.85)';
+                    ctx.fillRect(pad - 6, canvasH - footerHeight + 8, canvasW - (pad - 6) * 2, footerHeight - 22);
+                } else if (theme.bg === 'candycane') {
+                    drawCandyCanePattern(ctx, canvasW, canvasH);
+                } else {
+                    ctx.fillStyle = theme.bg;
+                    ctx.fillRect(0, 0, canvasW, canvasH);
+                }
+
+                // Outer decorative border
+                ctx.strokeStyle = theme.border;
+                ctx.lineWidth = 6;
+                ctx.strokeRect(3, 3, canvasW - 6, canvasH - 6);
+
+                // Top "THE ADA KAFFI" Holiday Header Branding
+                ctx.fillStyle = theme.text;
+                ctx.font = '700 18px "Playfair Display", serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('★  THE ADA KAFFI  •  HOLIDAY EDITION  ★', canvasW / 2, headerHeight / 2 + 4);
+
+                // 2. Draw Captured Photos into Slots
+                const frames = state.capturedFrames;
+                if (state.mode === 'single') {
+                    drawPhotoSlot(ctx, frames[0], pad, headerHeight, photoW, photoH, theme.border);
+                } else if (state.mode === 'strip') {
+                    for (let i = 0; i < 4; i++) {
+                        const frame = frames[i] || frames[0];
+                        const y = headerHeight + i * (photoH + gap);
+                        drawPhotoSlot(ctx, frame, pad, y, photoW, photoH, theme.border);
+                    }
+                } else if (state.mode === 'grid') {
+                    for (let i = 0; i < 4; i++) {
+                        const frame = frames[i] || frames[0];
+                        const col = i % 2;
+                        const row = Math.floor(i / 2);
+                        const x = pad + col * (photoW + gap);
+                        const y = headerHeight + row * (photoH + gap);
+                        drawPhotoSlot(ctx, frame, x, y, photoW, photoH, theme.border);
+                    }
+                }
+
+                // 3. Draw Custom Holiday Caption & Winter Date Stamp
+                const footerCenterY = canvasH - footerHeight / 2;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const cleanCaption = state.caption.trim();
+                const dateStr = new Date().toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                if (cleanCaption && state.showDate) {
+                    ctx.fillStyle = theme.text;
+                    ctx.font = '700 32px "Caveat", cursive';
+                    ctx.fillText(cleanCaption, canvasW / 2, footerCenterY - 12);
+
+                    ctx.fillStyle = theme.subtext;
+                    ctx.font = '600 14px "Inter", sans-serif';
+                    ctx.fillText(WINTER 2026  •  ${dateStr.toUpperCase()}  •  THE ADA KAFFI, canvasW / 2, footerCenterY + 22);
+                } else if (cleanCaption) {
+                    ctx.fillStyle = theme.text;
+                    ctx.font = '700 36px "Caveat", cursive';
+                    ctx.fillText(cleanCaption, canvasW / 2, footerCenterY + 2);
+                } else if (state.showDate) {
+                    ctx.fillStyle = theme.subtext;
+                    ctx.font = '600 16px "Inter", sans-serif';
+                    ctx.fillText(WINTER 2026  •  ${dateStr.toUpperCase()}  •  THE ADA KAFFI, canvasW / 2, footerCenterY + 2);
+                }
+
+                // 4. Draw Emoji Stickers
+                state.stickers.forEach((st, idx) => {
+                    const px = st.x * canvasW;
+                    const py = st.y * canvasH;
+                    const fontSize = Math.round(canvasW * st.size);
+                    ctx.font = ${fontSize}px serif;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(st.emoji, px, py);
+
+                    // Draw subtle selection ring when actively dragging
+                    if (idx === state.draggingStickerIdx) {
+                        ctx.save();
+                        ctx.strokeStyle = '#fbbf24';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([6, 4]);
+                        ctx.beginPath();
+                        ctx.arc(px, py, fontSize * 0.62, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                });
+
+                // Show Canvas & Enable Download
+                els.canvasEmptyState.classList.add('hidden');
+                els.outputCanvas.classList.remove('hidden');
+                els.downloadBtn.disabled = false;
+
+                if (saveToHistory) {
+                    addToSessionGallery(canvas.toDataURL('image/png'));
+                }
+            }
+
+            function drawPhotoSlot(ctx, imgSource, x, y, w, h, borderColor) {
+                ctx.save();
+                ctx.drawImage(imgSource, x, y, w, h);
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x, y, w, h);
+                ctx.restore();
+            }
+
+            // ==========================================
+            // 11. INTERACTIVE STICKER DRAGGING & RESIZING
+            // ==========================================
+            function getCanvasNormalizedCoords(clientX, clientY) {
+                const rect = els.outputCanvas.getBoundingClientRect();
+                return {
+                    x: (clientX - rect.left) / rect.width,
+                    y: (clientY - rect.top) / rect.height
+                };
+            }
+
+            function handlePointerDown(clientX, clientY) {
+                if (state.stickers.length === 0) return;
+                const pos = getCanvasNormalizedCoords(clientX, clientY);
+                for (let i = state.stickers.length - 1; i >= 0; i--) {
+                    const st = state.stickers[i];
+                    const dist = Math.hypot(pos.x - st.x, pos.y - st.y);
+                    if (dist < st.size * 0.85) {
+                        state.draggingStickerIdx = i;
+                        state.selectedStickerIdx = i;
+                        updateSelectedStickerUI();
+                        renderComposedCanvas(false);
+                        break;
+                    }
+                }
+            }
+
+            function handlePointerMove(clientX, clientY) {
+                if (state.draggingStickerIdx === -1) return;
+                const pos = getCanvasNormalizedCoords(clientX, clientY);
+                const st = state.stickers[state.draggingStickerIdx];
+                st.x = Math.max(0.05, Math.min(0.95, pos.x));
+                st.y = Math.max(0.05, Math.min(0.95, pos.y));
+                renderComposedCanvas(false);
+            }
+
+            function handlePointerUp() {
+                if (state.draggingStickerIdx !== -1) {
+                    state.draggingStickerIdx = -1;
+                    renderComposedCanvas(false);
+                }
+            }
+
+            els.outputCanvas.addEventListener('mousedown', e => handlePointerDown(e.clientX, e.clientY));
+            window.addEventListener('mousemove', e => handlePointerMove(e.clientX, e.clientY));
+            window.addEventListener('mouseup', handlePointerUp);
+
+            els.outputCanvas.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+            window.addEventListener('touchmove', e => {
+                if (state.draggingStickerIdx !== -1 && e.touches.length === 1) {
+                    handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+            window.addEventListener('touchend', handlePointerUp);
+
+            // Sticker resize & delete buttons
+            els.stickerSmallerBtn.addEventListener('click', () => {
+                const st = state.stickers[state.selectedStickerIdx];
+                if (!st) return;
+                st.size = Math.max(0.05, st.size - 0.02);
+                renderComposedCanvas(false);
+            });
+
+            els.stickerLargerBtn.addEventListener('click', () => {
+                const st = state.stickers[state.selectedStickerIdx];
+                if (!st) return;
+                st.size = Math.min(0.26, st.size + 0.02);
+                renderComposedCanvas(false);
+            });
+
+            els.stickerDeleteBtn.addEventListener('click', () => {
+                if (state.selectedStickerIdx < 0) return;
+                state.stickers.splice(state.selectedStickerIdx, 1);
+                state.selectedStickerIdx = state.stickers.length - 1;
+                updateSelectedStickerUI();
+                renderComposedCanvas(false);
+            });
+
+            // ==========================================
+            // 12. SESSION GALLERY & DOWNLOAD HANDLERS
+            // ==========================================
+            function addToSessionGallery(dataUrl) {
+                const item = {
+                    id: Date.now().toString(),
+                    dataUrl,
+                    mode: state.mode
+                };
+                state.sessionHistory.unshift(item);
+                renderGalleryTray();
+            }
+
+            function renderGalleryTray() {
+                els.galleryCount.textContent = state.sessionHistory.length;
+
+                if (state.sessionHistory.length === 0) {
+                    els.galleryTray.innerHTML = '';
+                    els.galleryTray.appendChild(els.galleryEmptyMsg);
+                    els.galleryEmptyMsg.classList.remove('hidden');
+                    els.clearGalleryBtn.classList.add('hidden');
+                    return;
+                }
+
+                els.clearGalleryBtn.classList.remove('hidden');
+                els.galleryTray.innerHTML = '';
+
+                state.sessionHistory.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'relative group shrink-0 w-20 h-24 rounded-xl overflow-hidden border border-amber-800/70 bg-kaffi-950 shadow-md';
+
+                    const img = document.createElement('img');
+                    img.src = item.dataUrl;
+                    img.alt = 'The Ada Kaffi holiday snap';
+                    img.className = 'w-full h-full object-cover cursor-pointer group-hover:scale-105 transition duration-200';
+                    img.addEventListener('click', () => loadHistoryItemToPreview(item.dataUrl));
+
+                    const actions = document.createElement('div');
+                    actions.className = 'absolute inset-0 bg-kaffi-950/75 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1.5';
+
+                    const dlBtn = document.createElement('button');
+                    dlBtn.title = 'Download PNG';
+                    dlBtn.className = 'p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition';
+                    dlBtn.innerHTML = '<i class="ph-bold ph-download-simple text-xs"></i>';
+                    dlBtn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        triggerDownload(item.dataUrl, 'the-ada-kaffi-christmas-photo.png');
+                    });
+
+                    const delBtn = document.createElement('button');
+                    delBtn.title = 'Delete';
+                    delBtn.className = 'p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-500 transition';
+                    delBtn.innerHTML = '<i class="ph-bold ph-trash text-xs"></i>';
+                    delBtn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        state.sessionHistory = state.sessionHistory.filter(h => h.id !== item.id);
+                        renderGalleryTray();
+                    });
+
+                    actions.appendChild(dlBtn);
+                    actions.appendChild(delBtn);
+                    card.appendChild(img);
+                    card.appendChild(actions);
+                    els.galleryTray.appendChild(card);
+                });
+            }
+
+            function loadHistoryItemToPreview(dataUrl) {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = els.outputCanvas;
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    els.canvasEmptyState.classList.add('hidden');
+                    canvas.classList.remove('hidden');
+                    els.downloadBtn.disabled = false;
+                    showToast('Loaded keepsake from session roll', 'info');
+                };
+                img.src = dataUrl;
+            }
+
+            function triggerDownload(dataUrl, filename) {
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast('Saved the-ada-kaffi-christmas-photo.png! 🎄', 'success');
+            }
+
+            // ==========================================
+            // 13. EVENT LISTENERS
+            // ==========================================
+            els.mirrorBtn.addEventListener('click', () => {
+                state.mirrored = !state.mirrored;
+                els.video.classList.toggle('mirrored', state.mirrored);
+                els.mirrorBtn.innerHTML = `
+                    <i class="ph-bold ph-flip-horizontal text-base"></i>
+                    <span class="hidden md:inline">Mirror: ${state.mirrored ? 'On' : 'Off'}</span>
+                `;
+                els.mirrorBtn.classList.toggle('text-amber-300', state.mirrored);
+                els.mirrorBtn.classList.toggle('text-amber-200/50', !state.mirrored);
+            });
+
+            els.soundBtn.addEventListener('click', () => {
+                state.soundEnabled = !state.soundEnabled;
+                els.soundIcon.className = state.soundEnabled
+                    ? 'ph-bold ph-speaker-high text-base text-amber-100'
+                    : 'ph-bold ph-speaker-slash text-base text-amber-200/45';
+                showToast(state.soundEnabled ? 'Sleigh bells & shutter enabled' : 'Audio muted', 'info');
+            });
+
+            els.cameraSelect.addEventListener('change', e => {
+                initCamera(e.target.value);
+            });
+
+            els.modeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (state.isCapturing) return;
+                    state.mode = btn.dataset.mode;
+                    els.modeBtns.forEach(b => {
+                        b.classList.remove('pill-active');
+                        b.classList.add('text-amber-200/70');
+                    });
+                    btn.classList.add('pill-active');
+                    btn.classList.remove('text-amber-200/70');
+                });
+            });
+
+            els.timerBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (state.isCapturing) return;
+                    state.timerSeconds = parseInt(btn.dataset.timer, 10);
+                    els.timerBtns.forEach(b => {
+                        b.classList.remove('pill-active');
+                        b.classList.add('text-amber-200/70');
+                    });
+                    btn.classList.add('pill-active');
+                    btn.classList.remove('text-amber-200/70');
+                });
+            });
+
+            els.shutterBtn.addEventListener('click', startCaptureSequence);
+
+            els.cancelCaptureBtn.addEventListener('click', () => {
+                state.cancelRequested = true;
+            });
+
+            els.retryCameraBtn.addEventListener('click', () => initCamera());
+            els.demoModeBtn.addEventListener('click', startDemoMode);
+
+            els.captionInput.addEventListener('input', e => {
+                state.caption = e.target.value;
+                if (state.capturedFrames.length > 0) renderComposedCanvas(false);
+            });
+
+            els.dateToggle.addEventListener('change', e => {
+                state.showDate = e.target.checked;
+                if (state.capturedFrames.length > 0) renderComposedCanvas(false);
+            });
+
+            els.clearStickersBtn.addEventListener('click', () => {
+                state.stickers = [];
+                state.selectedStickerIdx = -1;
+                updateSelectedStickerUI();
+                if (state.capturedFrames.length > 0) renderComposedCanvas(false);
+            });
+
+            els.downloadBtn.addEventListener('click', () => {
+                if (els.outputCanvas.classList.contains('hidden')) return;
+                const dataUrl = els.outputCanvas.toDataURL('image/png');
+                triggerDownload(dataUrl, 'the-ada-kaffi-christmas-photo.png');
+            });
+
+            els.clearGalleryBtn.addEventListener('click', () => {
+                state.sessionHistory = [];
+                renderGalleryTray();
+                showToast('Holiday keepsake roll cleared', 'info');
+            });
+
+            window.addEventListener('keydown', e => {
+                if (e.code === 'Space' && document.activeElement !== els.captionInput && !state.isCapturing) {
+                    e.preventDefault();
+                    startCaptureSequence();
+                }
+            });
+
+            // ==========================================
+            // 14. BOOTSTRAP APPLICATION
+            // ==========================================
+            window.addEventListener('DOMContentLoaded', () => {
+                initSnowfall();
+                buildFilterUI();
+                buildThemeUI();
+                buildStickerPalette();
+                initCamera();
+            });
+        })();
+    </script>
+</body>
+</html>
